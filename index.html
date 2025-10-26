@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LSAT Study App — 2025 Format</title>
+<style>
+  :root{
+    --ink:#1f2937; --bg:#f7fafc; --card:#ffffff; --accent:#6b5b95; --accent2:#ff7eb9; --good:#10b981; --bad:#ef4444;
+  }
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;background:linear-gradient(90deg,var(--accent),#77c0ff);color:#fff;padding:14px 18px;z-index:5}
+  header h1{margin:0;font-size:18px}
+  .wrap{max-width:1000px;margin:24px auto;padding:0 16px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}
+  .toolbar > *{background:var(--card);border:1px solid #e5e7eb;border-radius:10px;padding:10px}
+  select,button,input[type="range"]{font-size:14px}
+  button{cursor:pointer;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 14px}
+  button.secondary{background:#e5e7eb;color:#111}
+  button.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6)}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  .pill{display:inline-flex;align-items:center;gap:8px}
+  .card{background:var(--card);border:1px solid #e5e7eb;border-radius:14px;padding:18px;margin:16px 0}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:#4b5563}
+  .question-stem{font-size:16px;line-height:1.45;margin:12px 0}
+  .choices{display:grid;gap:8px;margin:12px 0}
+  .choice{border:1px solid #e5e7eb;border-radius:10px;padding:10px;display:flex;gap:10px;align-items:flex-start;background:#fff}
+  .choice.correct{border-color:var(--good);background:#ecfdf5}
+  .choice.incorrect{border-color:var(--bad);background:#fef2f2}
+  .explanation{margin-top:10px;padding:12px;background:#f9fafb;border-left:4px solid var(--accent);border-radius:8px}
+  .passage{white-space:pre-wrap;background:#f9fafb;border:1px dashed #e5e7eb;border-radius:12px;padding:12px;margin:10px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .footer{display:flex;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+  .hidden{display:none}
+  /* Unicorn overlay */
+  .unicorn{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999;
+    pointer-events:none;
+  }
+  .unicorn.show{display:flex; animation:fadeout 3s forwards}
+  @keyframes fadeout{0%{opacity:1} 80%{opacity:1} 100%{opacity:0}}
+  .unicorn img{max-width:360px; width:50vw; transform:translateY(0); animation:float 3s ease-in-out forwards}
+  @keyframes float{0%{transform:translateY(0)} 50%{transform:translateY(-12px)} 100%{transform:translateY(-24px)}}
+  /* Tiny badge */
+  .badge{display:inline-block;background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:999px;font-size:12px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#111;color:#fff;border-radius:6px;padding:2px 6px;font-size:12px}
+  .muted{color:#6b7280}
+  details summary{cursor:pointer}
+  .source-links a{display:inline-block;margin-right:10px}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <h1>LSAT Study App <span class="badge">2025 Format</span></h1>
+    <div>
+      <button class="ghost" id="helpBtn" title="How to use">Help</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- MUSIC CONTROLS -->
+  <div class="toolbar" id="musicControls">
+    <div class="pill">
+      <strong>🎵 Background music</strong>
+      <label style="display:inline-flex;align-items:center;gap:6px;margin-left:8px">
+        <input type="checkbox" id="stimulatingToggle"> Stimulating playlist
+      </label>
+    </div>
+    <div class="pill">
+      <button id="prevTrack">⏮︎</button>
+      <button id="playPause">▶️ Play</button>
+      <button id="nextTrack">⏭︎</button>
+    </div>
+    <div class="pill">
+      <label>Volume
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.25">
+      </label>
+    </div>
+    <div class="pill muted" id="nowPlaying">Now playing: —</div>
+  </div>
+
+  <!-- SECTION CONTROLS -->
+  <div class="toolbar" id="sectionControls">
+    <div class="pill">
+      <label>Section
+        <select id="sectionSelect">
+          <option value="LR1">Logical Reasoning — Section 1</option>
+          <option value="LR2">Logical Reasoning — Section 2</option>
+          <option value="RC">Reading Comprehension</option>
+          <option value="EXP">Experimental (LR or RC)</option>
+        </select>
+      </label>
+    </div>
+    <div class="pill">
+      <span class="pill"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="timedToggle" checked> Timed (35:00)</label></span>
+    </div>
+    <div class="pill">
+      <button id="startBtn">Start section</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+    </div>
+    <div class="pill">
+      <strong>⏱️ Time:</strong> <span id="timer">35:00</span>
+    </div>
+    <div class="pill" style="min-width:200px;flex:1">
+      <div class="progress" style="width:100%"><div class="bar" id="progressBar"></div></div>
+      <div class="muted" style="font-size:12px;margin-top:4px"><span id="progressText">0 / 0</span></div>
+    </div>
+  </div>
+
+  <!-- QUESTION AREA -->
+  <div id="testArea" class="card hidden">
+    <div class="meta">
+      <div><strong id="sectionLabel">Section</strong></div>
+      <div>Q <span id="qIndex">1</span> of <span id="qTotal">—</span></div>
+    </div>
+
+    <div id="rcPassageWrap" class="passage hidden"></div>
+
+    <div class="question-stem" id="stem"></div>
+    <div class="choices" id="choices"></div>
+
+    <div class="footer">
+      <div>
+        <button id="submitBtn">Submit</button>
+        <button id="explainBtn" class="secondary">Show Explanation</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="muted">Mark for review</span>
+        <input type="checkbox" id="flag">
+      </div>
+      <div>
+        <button id="prevBtn" class="secondary">◀︎ Prev</button>
+        <button id="nextBtn">Next ▶︎</button>
+      </div>
+    </div>
+
+    <div id="explanation" class="explanation hidden"></div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="summary" class="card hidden"></div>
+
+  <!-- HELP -->
+  <div id="help" class="card hidden">
+    <h3>How to use</h3>
+    <ol>
+      <li>Pick a section, toggle <span class="kbd">Timed</span> on/off, then press <span class="kbd">Start section</span>.</li>
+      <li>Answer with A–E and click <span class="kbd">Submit</span>; you’ll get correctness + explanations. Correct = 🌈🦄 for 3 seconds!</li>
+      <li>Use <span class="kbd">Prev</span>/<span class="kbd">Next</span> to navigate; flagged questions are remembered.</li>
+      <li>Music: use ⏮︎ ▶️ ⏭︎ and the volume slider. Toggle “Stimulating playlist” for energetic pieces.</li>
+      <li>Swap in your own LR/RC sets in the <span class="kbd">QUESTION_BANK</span> below.</li>
+    </ol>
+    <details>
+      <summary>Sources & Playlists (free/public-domain)</summary>
+      <div class="source-links">
+        <a href="https://musopen.org/" target="_blank" rel="noopener">Musopen (public-domain recordings)</a>
+        <a href="https://www.youtube.com/playlist?list=PLh5X0e7-mnI0pvqN_x35LPJEzUcZ8zpLx" target="_blank" rel="noopener">YouTube: Musopen classical playlist</a>
+        <a href="https://commons.wikimedia.org/wiki/Category:Audio_files_of_classical_music_by_the_HR_Sinfonieorchester" target="_blank" rel="noopener">Wikimedia MP3 excerpts (HR Sinfonieorchester)</a>
+      </div>
+      <p class="muted">Note: Some sites block hotlinking. If a file won’t play, download it or host in your GitHub repo and reference it with a relative path.</p>
+    </details>
+  </div>
+</div>
+
+<!-- Unicorn overlay -->
+<div class="unicorn" id="unicorn">
+  <img alt="Unicorn riding a rainbow" src="data:image/svg+xml;utf8,
+    <svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'>
+      <defs>
+        <linearGradient id='g' x1='0' y1='0' x2='1' y2='0'>
+          <stop offset='0%' stop-color='%23ff0000'/><stop offset='20%' stop-color='%23ffff00'/>
+          <stop offset='40%' stop-color='%2300ff00'/><stop offset='60%' stop-color='%2300ffff'/>
+          <stop offset='80%' stop-color='%230000ff'/><stop offset='100%' stop-color='%23ff00ff'/>
+        </linearGradient>
+      </defs>
+      <rect width='100%' height='100%' fill='transparent'/>
+      <path d='M0,350 C150,250 300,250 450,350' stroke='url(%23g)' stroke-width='30' fill='none'/>
+      <g transform='translate(300,220)'>
+        <circle cx='0' cy='0' r='36' fill='white' stroke='%23999'/>
+        <circle cx='-10' cy='-4' r='4' fill='black'/>
+        <polygon points='-14,-36 -4,-36 -20,-70' fill='%23f0c' />
+        <rect x='-34' y='12' width='68' height='12' rx='6' fill='%23ffc'/>
+      </g>
+    </svg>">
+</div>
+
+<audio id="bgAudio" preload="auto"></audio>
+
+<script>
+/* =======================
+   🎵 1) MUSIC PLAYLISTS
+   ======================= */
+/* A calm track (OGG) from Wikimedia Free Music Archive mirror (Bach, Goldberg Aria by Aaron Dunn) */
+const calmPlaylist = [
+  "https://upload.wikimedia.org/wikipedia/commons/2/27/Aaron_Dunn_-_Goldberg_Variations_BWV_988_-_Aria.ogg"
+];
+/* Stimulating MP3 excerpts from Wikimedia HR Sinfonieorchester (short, energetic orchestra) */
+const stimulatingPlaylist = [
+  "https://upload.wikimedia.org/wikipedia/commons/2/2d/Anton%C3%ADn_Dvo%C5%99%C3%A1k_Symphony_no._9_1st_movement_excerpt.mp3",
+  "https://upload.wikimedia.org/wikipedia/commons/1/1a/Gustav_Mahler_Symphony_no._1_2nd_movement_excerpt.mp3",
+  "https://upload.wikimedia.org/wikipedia/commons/4/4a/Georges_Bizet_L%27Arl%C3%A9sienne_Suite_no._1_1st_movement_excerpt.mp3"
+];
+
+let currentPlaylist = calmPlaylist;
+let trackIndex = 0;
+
+const audioEl = document.getElementById('bgAudio');
+const playPauseBtn = document.getElementById('playPause');
+const prevBtnTrack = document.getElementById('prevTrack');
+const nextBtnTrack = document.getElementById('nextTrack');
+const vol = document.getElementById('volume');
+const nowPlaying = document.getElementById('nowPlaying');
+const stimulatingToggle = document.getElementById('stimulatingToggle');
+
+function loadTrack(i){
+  if(!currentPlaylist.length){ nowPlaying.textContent = "Now playing: (add tracks in code)"; return; }
+  trackIndex = (i + currentPlaylist.length) % currentPlaylist.length;
+  audioEl.src = currentPlaylist[trackIndex];
+  nowPlaying.textContent = `Now playing: Track ${trackIndex+1} of ${currentPlaylist.length}`;
+  audioEl.play().then(()=>{ playPauseBtn.textContent = "⏸︎ Pause"; }).catch(()=>{
+    playPauseBtn.textContent = "▶️ Play"; // Autoplay may be blocked
+  });
+}
+playPauseBtn.onclick = () => {
+  if(audioEl.paused){ audioEl.play(); playPauseBtn.textContent="⏸︎ Pause"; }
+  else { audioEl.pause(); playPauseBtn.textContent="▶️ Play"; }
+};
+prevBtnTrack.onclick = ()=> loadTrack(trackIndex-1);
+nextBtnTrack.onclick = ()=> loadTrack(trackIndex+1);
+vol.oninput = ()=> audioEl.volume = parseFloat(vol.value);
+stimulatingToggle.onchange = ()=>{
+  currentPlaylist = stimulatingToggle.checked ? stimulatingPlaylist : calmPlaylist;
+  loadTrack(0);
+};
+audioEl.addEventListener('ended', ()=> loadTrack(trackIndex+1));
+audioEl.volume = parseFloat(vol.value);
+
+/* =======================
+   🧠 2) QUESTIONS BANK (sample)
+   ======================= */
+const QUESTION_BANK = {
+  LR1: [
+    {
+      type: "LR",
+      stem: "Critic: The city claims its arts grants increased museum attendance. But admissions rose only after a blockbuster exhibit opened. Therefore, the grants didn’t cause the increase.",
+      choices: [
+        "Points out an alternative explanation for the observed effect.",
+        "Draws a conclusion about all arts grants from a single case.",
+        "Mistakes correlation for causation in defending the city’s claim.",
+        "Confuses necessary and sufficient conditions for museum funding.",
+        "Concludes that an action had no effect because another factor was present."
+      ],
+      answer: 0,
+      explanation: "By noting a plausible alternative cause (the blockbuster exhibit), the critic weakens the causal claim. Choice (A) describes that move directly; (E) overstates the conclusion."
+    },
+    {
+      type: "LR",
+      stem: "Nutritionist: No randomized study shows that midnight snacks reduce sleep quality. Hence, midnight snacking does not reduce sleep quality.",
+      choices: [
+        "Takes lack of evidence for a claim as evidence that the claim is false.",
+        "Generalizes from a sample that is not representative.",
+        "Presumes that what is true in theory is true in practice.",
+        "Conflates cause with mere temporal sequence.",
+        "Bases a conclusion on ambiguous terminology."
+      ],
+      answer: 0,
+      explanation: "This is the classic ‘absence of evidence is evidence of absence’ flaw. (A) captures it."
+    },
+    {
+      type: "LR",
+      stem: "Linguist: Communities that maintain strong oral traditions tend to have fewer written records. Therefore, the scarcity of written records in Region Z shows that its oral traditions must be strong.",
+      choices: [
+        "Confuses a sufficient condition for a necessary one.",
+        "Fails to consider that multiple causes can lead to the same effect.",
+        "Assumes that correlation holds uniformly over time.",
+        "Draws an illicit statistical comparison between unlike groups.",
+        "Presumes, without justification, that written records are reliable."
+      ],
+      answer: 1,
+      explanation: "Infers the cause (strong oral traditions) from one effect (few written records) without ruling out other explanations like conflict or climate. (B) is best."
+    }
+  ],
+  LR2: [
+    {
+      type: "LR",
+      stem: "Editor: Readers complain that long investigative pieces are ‘too dense.’ Yet data show they spend more total minutes on those articles than any other. So we should publish more long investigations.",
+      choices: [
+        "Treats a mere correlation as if it established cause.",
+        "Infers overall preference from time-on-page without considering skimming or re-reads.",
+        "Uses an equivocal term without defining it.",
+        "Rejects a claim on the basis of its source.",
+        "Relies on a survey with a biased question."
+      ],
+      answer: 1,
+      explanation: "Minutes spent may reflect difficulty or repeated attempts—time ≠ preference. (B) points out the alternative explanation."
+    },
+    {
+      type: "LR",
+      stem: "Biologist: Every known specimen of the silver fern fluoresces under UV light. The plant outside my window fluoresces under UV light. Therefore, it is a silver fern.",
+      choices: [
+        "Confuses a necessary condition for a sufficient one.",
+        "Overlooks the possibility of measurement error.",
+        "Assumes a property is unique to one group when it may not be.",
+        "Fails to consider seasonal variation.",
+        "Bases a conclusion on an unrepresentative sample."
+      ],
+      answer: 0,
+      explanation: "If all silver ferns fluoresce (necessary), that does not mean only silver ferns fluoresce. The argument treats necessity as sufficiency."
+    }
+  ],
+  RC: [
+    {
+      type: "RC",
+      passage:
+`Passage (Humanities):
+Scholars once portrayed early quilt-making as purely domestic craft. Recent research reveals complex authorship networks: communal design, shared motifs across regions, and collaborative production. Viewing quilts as collective art reframes their historical value and challenges attributions to single makers.`,
+      stem: "The primary purpose of the passage is to:",
+      choices: [
+        "argue that quilts should be appraised at higher market values.",
+        "question the authenticity of all attributions to single makers.",
+        "propose a revised interpretive lens that emphasizes collaboration.",
+        "prove that quilting was never a domestic craft.",
+        "compare regional styles of early quilts in detail."
+      ],
+      answer: 2,
+      explanation: "The passage recasts quilts through a collaborative lens, not market value or detailed style comparison. (C) best captures the author’s aim."
+    },
+    {
+      type: "RC",
+      passage:
+`Passage (Science):
+Marine bioacoustics shows that certain reef fish produce low-frequency ‘drumming’ during spawning. These sounds correlate with increased egg fertilization, but experiments indicate the sound itself does not alter gamete chemistry; rather, synchronized drumming coordinates group timing, indirectly improving success.`,
+      stem: "Which inference is most supported?",
+      choices: [
+        "Drumming directly changes gamete chemistry to improve fertilization.",
+        "Coordinated behavior, not acoustic properties per se, enhances outcomes.",
+        "Only reef fish with specialized organs can spawn successfully.",
+        "Visual cues are irrelevant during spawning events.",
+        "Group size, not timing, determines fertilization rates."
+      ],
+      answer: 1,
+      explanation: "The passage distinguishes correlation from mechanism and says timing coordination is the key. (B) follows."
+    }
+  ],
+  EXP: [
+    {
+      type: "LR",
+      stem: "Economist: Since the transit authority reduced fares, ridership rose. Therefore, the fare reduction caused the rise in ridership.",
+      choices: [
+        "Concludes a causal relationship based on temporal order alone.",
+        "Mistakes a necessary condition for a sufficient one.",
+        "Ignores that people sometimes act irrationally.",
+        "Equivocates on the term ‘ridership’.",
+        "Fails to provide a margin of error."
+      ],
+      answer: 0,
+      explanation: "Classic post hoc fallacy. Other factors could explain the increase (service changes, gas prices)."
+    }
+  ]
+};
+const TARGET = { LR1: 25, LR2: 25, RC: 27, EXP: 25 };
+
+/* =======================
+   🧩 3) APP STATE
+   ======================= */
+let state = {
+  sectionKey: "LR1",
+  idx: 0,
+  answers: [],
+  flagged: new Set(),
+  timeLeft: 35*60,
+  running: false,
+  timerId: null,
+  timed: true
+};
+
+/* =======================
+   🖥️ 4) UI ELEMENTS
+   ======================= */
+const sectionSelect = document.getElementById('sectionSelect');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const timerEl = document.getElementById('timer');
+const testArea = document.getElementById('testArea');
+const sectionLabel = document.getElementById('sectionLabel');
+const stemEl = document.getElementById('stem');
+const choicesEl = document.getElementById('choices');
+const submitBtn = document.getElementById('submitBtn');
+const explainBtn = document.getElementById('explainBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const qIndexEl = document.getElementById('qIndex');
+const qTotalEl = document.getElementById('qTotal');
+const explanationEl = document.getElementById('explanation');
+const flagChk = document.getElementById('flag');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const rcPassageWrap = document.getElementById('rcPassageWrap');
+const summaryEl = document.getElementById('summary');
+const help = document.getElementById('help');
+document.getElementById('helpBtn').onclick = ()=> help.classList.toggle('hidden');
+const unicorn = document.getElementById('unicorn');
+const timedToggle = document.getElementById('timedToggle');
+
+/* =======================
+   ⏱️ 5) TIMER (optional)
+   ======================= */
+function fmt(n){ const m = Math.floor(n/60); const s = (n%60).toString().padStart(2,"0"); return `${m}:${s}`; }
+function startTimer(){
+  clearInterval(state.timerId);
+  if(!state.timed){ timerEl.textContent = "—"; return; }
+  state.running = true;
+  state.timerId = setInterval(()=>{
+    if(state.timeLeft<=0){ clearInterval(state.timerId); finishSection(); return; }
+    state.timeLeft--; timerEl.textContent = fmt(state.timeLeft);
+  },1000);
+}
+function stopTimer(){ clearInterval(state.timerId); state.running=false; }
+function resetTimer(){ stopTimer(); state.timeLeft = 35*60; timerEl.textContent = state.timed ? "35:00" : "—"; }
+
+/* =======================
+   🧭 6) NAV / RENDER
+   ======================= */
+function getQuestions(){ return QUESTION_BANK[state.sectionKey] || []; }
+function currentQuestion(){ const qs = getQuestions(); return qs[state.idx] ?? null; }
+function renderProgress(){
+  const qs = getQuestions();
+  const total = qs.length;
+  const answered = state.answers.filter(a=>a!==undefined).length;
+  const pct = total? (answered/total)*100 : 0;
+  progressBar.style.width = pct + "%";
+  progressText.textContent = `${answered} / ${total}`;
+}
+function renderQuestion(){
+  summaryEl.classList.add('hidden');
+  testArea.classList.remove('hidden');
+  const qs = getQuestions();
+  const q = currentQuestion();
+  qIndexEl.textContent = (state.idx+1);
+  qTotalEl.textContent = qs.length;
+  sectionLabel.textContent = labelFor(state.sectionKey);
+
+  rcPassageWrap.classList.add('hidden');
+  if(q && q.type === "RC" && q.passage){
+    rcPassageWrap.classList.remove('hidden');
+    rcPassageWrap.textContent = q.passage;
+  }
+
+  stemEl.textContent = q ? q.stem : "(No question)";
+  choicesEl.innerHTML = "";
+  explanationEl.classList.add('hidden');
+  explanationEl.textContent = "";
+
+  const stored = state.answers[state.idx]?.choice ?? null;
+
+  (q?.choices || []).forEach((txt, i)=>{
+    const div = document.createElement('label');
+    div.className = "choice";
+    const radio = document.createElement('input');
+    radio.type = "radio"; radio.name = "choice"; radio.value = i;
+    if(stored===i) radio.checked = true;
+    const tag = String.fromCharCode(65+i);
+    const strong = document.createElement('strong');
+    strong.textContent = tag + ".";
+    strong.style.minWidth="20px";
+    const span = document.createElement('div');
+    span.textContent = " " + txt;
+    div.appendChild(radio); div.appendChild(strong); div.appendChild(span);
+    choicesEl.appendChild(div);
+  });
+
+  flagChk.checked = state.flagged.has(state.idx);
+  renderProgress();
+}
+function labelFor(k){
+  return {
+    LR1:"Logical Reasoning — Section 1",
+    LR2:"Logical Reasoning — Section 2",
+    RC:"Reading Comprehension",
+    EXP:"Experimental (practice)"
+  }[k] || k;
+}
+
+/* =======================
+   ✅ 7) ANSWERING
+   ======================= */
+function submitAnswer(){
+  const qs = getQuestions(); const q = currentQuestion();
+  if(!q) return;
+  const radios = [...document.querySelectorAll('input[name="choice"]')];
+  const sel = radios.find(r=>r.checked);
+  if(!sel){ alert("Choose an answer (A–E) before submitting."); return; }
+  const choice = parseInt(sel.value,10);
+  const correct = (choice === q.answer);
+  state.answers[state.idx] = { choice, correct };
+
+  // Visual feedback
+  [...choicesEl.querySelectorAll('.choice')].forEach((el, i)=>{
+    el.classList.remove('correct','incorrect');
+    if(i === q.answer) el.classList.add('correct');
+    if(i === choice && !correct) el.classList.add('incorrect');
+  });
+
+  // Unicorn celebration
+  if(correct){
+    unicorn.classList.add('show');
+    setTimeout(()=> unicorn.classList.remove('show'), 3000);
+  }
+
+  // Show explanation
+  showExplanation();
+  renderProgress();
+}
+function showExplanation(){
+  const q = currentQuestion();
+  if(!q) return;
+  explanationEl.textContent = q.explanation || "Explanation not provided.";
+  explanationEl.classList.remove('hidden');
+}
+
+/* =======================
+   🔚 8) SUMMARY
+   ======================= */
+function finishSection(){
+  stopTimer();
+  testArea.classList.add('hidden');
+  const qs = getQuestions();
+  const total = qs.length;
+  const answered = state.answers.filter(x=>x!==undefined).length;
+  const correct = state.answers.filter(x=>x?.correct).length;
+  const flagged = [...state.flagged].sort((a,b)=>a-b).map(i=>i+1);
+
+  summaryEl.innerHTML = `
+    <h3>Section complete — ${labelFor(state.sectionKey)}</h3>
+    <p><strong>Score:</strong> ${correct} / ${total} (answered ${answered})</p>
+    <p><strong>Flagged:</strong> ${flagged.length? flagged.join(', '): 'None'}</p>
+    <div class="grid">
+      <div>
+        <h4>Review</h4>
+        <ol id="reviewList"></ol>
+      </div>
+      <div>
+        <h4>About this section</h4>
+        <p class="muted">Target count for ${state.sectionKey.startsWith('LR')?'LR':'RC'} (2025): ${
+          state.sectionKey.startsWith('LR') ? '24–26' : '26–28'
+        }.</p>
+      </div>
+    </div>
+  `;
+  const list = summaryEl.querySelector('#reviewList');
+  qs.forEach((q,i)=>{
+    const me = state.answers[i];
+    const tag = me?.correct ? '✅' : (me ? '❌' : '—');
+    const li = document.createElement('li');
+    li.innerHTML = `${tag} Q${i+1}: <em>${q.type==='RC'?'RC':'LR'}</em> — <a href="#" data-jump="${i}">jump</a>`;
+    list.appendChild(li);
+  });
+  list.addEventListener('click',(e)=>{
+    const j = e.target.dataset?.jump;
+    if(j!==undefined){ e.preventDefault(); state.idx = parseInt(j,10); summaryEl.classList.add('hidden'); testArea.classList.remove('hidden'); renderQuestion(); }
+  });
+
+  summaryEl.classList.remove('hidden');
+}
+
+/* =======================
+   🕹️ 9) EVENT HOOKS
+   ======================= */
+sectionSelect.onchange = (e)=>{ state.sectionKey = e.target.value; };
+timedToggle.onchange = ()=>{
+  state.timed = timedToggle.checked;
+  if(!state.timed){ stopTimer(); timerEl.textContent = "—"; }
+  else { timerEl.textContent = fmt(state.timeLeft); }
+};
+startBtn.onclick = ()=>{
+  state.idx = 0; state.answers = []; state.flagged = new Set();
+  state.timed = timedToggle.checked;
+  resetTimer();
+  const qs = getQuestions();
+  if(qs.length===0){
+    alert("No questions found for this section. Add items to QUESTION_BANK in the code.");
+    return;
+  }
+  testArea.classList.remove('hidden');
+  renderQuestion();
+  startTimer();
+  if(currentPlaylist.length){ loadTrack(0); }
+};
+resetBtn.onclick = ()=>{
+  state.idx = 0; state.answers=[]; state.flagged.clear(); resetTimer(); renderQuestion(); summaryEl.classList.add('hidden');
+};
+submitBtn.onclick = submitAnswer;
+explainBtn.onclick = showExplanation;
+prevBtn.onclick = ()=>{ if(state.idx>0){ state.idx--; renderQuestion(); } };
+nextBtn.onclick = ()=>{
+  const qs = getQuestions();
+  if(state.idx < qs.length-1){ state.idx++; renderQuestion(); }
+  else { finishSection(); }
+};
+flagChk.onchange = ()=>{ if(flagChk.checked) state.flagged.add(state.idx); else state.flagged.delete(state.idx); };
+
+/* Init */
+timerEl.textContent = timedToggle.checked ? "35:00" : "—";
+renderProgress();
+sectionLabel.textContent = labelFor(state.sectionKey);
+</script>
+</body>
+</html>
